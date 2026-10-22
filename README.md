@@ -19,6 +19,15 @@ we need to remove the product in `Releases` .
 
 ## macOS archives
 
+`Build and release Aseprite` builds natively for Apple Silicon on `macos-15`,
+using ARM64 Skia and an explicit ARM64 CMake target (macOS 11.0 or later).
+It verifies the executable's architecture before packaging. Windows and Linux
+builds remain in the same workflow.
+`Build and release Aseprite (macOS x86)` builds for Intel on `macos-15-intel`.
+The release ZIPs are named `Aseprite-<tag>-macOS-arm64.zip` and
+`Aseprite-<tag>-macOS-x64.zip`, respectively, so both can coexist in one Release.
+Both workflows run when `BuildLog.md` changes on `main`, or can be run manually.
+
 The macOS workflows create a relocatable `aseprite` launcher and ad-hoc sign
 `Aseprite.app` after resource cleanup. Before upload, they extract the ZIP into a
 new path containing spaces, check the bundle signature, and run `--version`

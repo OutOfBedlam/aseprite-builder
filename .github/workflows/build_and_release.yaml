@@ -50,6 +50,8 @@ jobs:
 
   build-aseprite:
     name: Build Aseprite
+    env:
+      ARCHIVE_NAME: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ matrix.archive-platform }}.zip
     needs: [fetch-aseprite-info, create-release]
     if: >-
       ${{ !cancelled() && needs.fetch-aseprite-info.result == 'success' &&
@@ -61,7 +63,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
         matrix:
-          os: [ windows-latest, ubuntu-latest, macOS-latest ]
+          include:
+            - os: windows-latest
+              archive-platform: Windows
+            - os: ubuntu-latest
+              archive-platform: Linux
+            - os: macos-15
+              archive-platform: macOS-arm64
         fail-fast: false
     steps:
       - name: Install Dependencies
@@ -104,15 +112,17 @@ jobs:
           export laf_backend=skia
           export enable_scripting=on
 
+          macos_options=()
           if [[ "${{ runner.os }}" == "macOS" ]] ; then
             export skia_arch=arm64
+            macos_options=(-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_SYSROOT=macosx -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0)
           else
             export skia_arch=x64
           fi
 
           cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9 \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+            "${macos_options[@]}" \
             -DENABLE_TESTS=OFF \
             -DENABLE_I18N_STRINGS=ON \
             -DENABLE_SCRIPTING=$enable_scripting \
@@ -126,6 +136,13 @@ jobs:
         working-directory: aseprite
         run: |
           cd build && ninja
+      - name: Verify macOS ARM64 binary
+        if: runner.os == 'macOS'
+        working-directory: aseprite/build/bin
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          test "$(lipo -archs Aseprite.app/Contents/MacOS/aseprite)" = arm64
       - name: Clean Up Build folder
         working-directory: aseprite/build/bin
         shell: bash
@@ -161,21 +178,20 @@ jobs:
       - name: Create ZIP archive
         if: runner.os != 'macOS'
         working-directory: aseprite/build/bin
-        run: 7z -tzip a Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip *
+        shell: bash
+        run: 7z -tzip a "$ARCHIVE_NAME" *
       - name: Package and verify macOS archive
         if: runner.os == 'macOS'
         timeout-minutes: 10
         working-directory: aseprite/build/bin
         shell: bash
-        env:
-          ARCHIVE_NAME: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
         run: bash "$GITHUB_WORKSPACE/.github/scripts/package-macos.sh" "$ARCHIVE_NAME"
       - name: Upload validation artifact
         if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish }}
         uses: actions/upload-artifact@v7
         with:
           name: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}-${{ runner.arch }}-attempt${{ github.run_attempt }}
-          path: aseprite/build/bin/Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
+          path: aseprite/build/bin/${{ env.ARCHIVE_NAME }}
           if-no-files-found: error
           compression-level: 0
       - name: Upload release
@@ -183,6 +199,6 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: aseprite/build/bin/Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
-          asset_name: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
+          file: aseprite/build/bin/${{ env.ARCHIVE_NAME }}
+          asset_name: ${{ env.ARCHIVE_NAME }}
           tag: ${{ needs.fetch-aseprite-info.outputs.release-tag }}
