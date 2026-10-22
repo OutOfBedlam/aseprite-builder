@@ -149,14 +149,14 @@ jobs:
         working-directory: aseprite/build/bin
         shell: bash
         env:
-          ARCHIVE_NAME: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
+          ARCHIVE_NAME: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}-x64.zip
         run: bash "$GITHUB_WORKSPACE/.github/scripts/package-macos.sh" "$ARCHIVE_NAME"
       - name: Upload validation artifact
         if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish }}
         uses: actions/upload-artifact@v7
         with:
           name: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}-${{ runner.arch }}-attempt${{ github.run_attempt }}
-          path: aseprite/build/bin/Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
+          path: aseprite/build/bin/Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}-x64.zip
           if-no-files-found: error
           compression-level: 0
       - name: Upload release
@@ -164,6 +164,6 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: aseprite/build/bin/Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
-          asset_name: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}.zip
+          file: aseprite/build/bin/Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}-x64.zip
+          asset_name: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}-x64.zip
           tag: ${{ needs.fetch-aseprite-info.outputs.release-tag }}
