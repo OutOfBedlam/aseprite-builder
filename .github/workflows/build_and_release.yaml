@@ -51,7 +51,7 @@ jobs:
   build-aseprite:
     name: Build Aseprite
     env:
-      ARCHIVE_NAME: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ runner.os }}${{ runner.os == 'macOS' && '-arm64' || '' }}.zip
+      ARCHIVE_NAME: Aseprite-${{ needs.fetch-aseprite-info.outputs.release-tag }}-${{ matrix.archive-platform }}.zip
     needs: [fetch-aseprite-info, create-release]
     if: >-
       ${{ !cancelled() && needs.fetch-aseprite-info.result == 'success' &&
@@ -63,7 +63,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
         matrix:
-          os: [ windows-latest, ubuntu-latest, macos-15 ]
+          include:
+            - os: windows-latest
+              archive-platform: Windows
+            - os: ubuntu-latest
+              archive-platform: Linux
+            - os: macos-15
+              archive-platform: macOS-arm64
         fail-fast: false
     steps:
       - name: Install Dependencies
